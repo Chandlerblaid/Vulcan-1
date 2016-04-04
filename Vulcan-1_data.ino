@@ -75,21 +75,48 @@ void setup() {
 // The loop routine runs over and over again forever:
 void loop() {
 
-  /* commands sent to the cameras from the serial monitor
+  /* 
+   *  Commands sent to the cameras from the serial monitor
    *  : 'f' = Turn off all cameras
+   *  : 'o' = Turn on all cameras
    *  : 's' = Stop recording on all cameras
+   *  : 'r' = Start recording on all cameras
    */
   msg = Serial.read();
-  if (msg = 'f') {
-    Serial.println("\nTurning Cameras off!\n");
-    
-    
+  switch (msg) {
+    case 'f':
+      Serial.println("\nTurning Cameras off!\n");
+      turnOff = true;
+      on = true;
+      break;
+
+    case 'o': 
+      Serial.println("\nTurning all Cameras on!\n");
+      turnOff = false;
+      on = false;
+      break;
+
+    case 's':
+      Serial.println("\nStopping Recording on all Cameras!\n");
+      stopRecording = true;
+      recording = true;
+      break;
+
+    case 'r':
+      Serial.println("\nStarting to Record on all Cameras!\n");
+      stopRecording = false;
+      recording = false;
+      break;
+
+    default:
+      turnOff = false;
+      stopRecording = false;
   }
 
   // read the input on analog pin 0:
-  int sensorPT1 = analogRead(A0); //PT1
-  int sensorPT2 = analogRead(A1); //PT2
-  int sensorPT3 = analogRead(A2); //PT3
+//  int sensorPT1 = analogRead(A0); //PT1
+//  int sensorPT2 = analogRead(A1); //PT2
+//  int sensorPT3 = analogRead(A2); //PT3
 //  int sensorPT4 = analogRead(A3); //PT4
 //  int sensorPT5 = analogRead(A4); //PT1
 //  int sensorPT6 = analogRead(A5); //PT2
@@ -98,15 +125,15 @@ void loop() {
   
   // print out the value you read:
 
-  Serial.print("PT 1: ");
-  Serial.print(sensorPT1);
-  Serial.print("\t");
-  Serial.print("PT 2: ");
-  Serial.print(sensorPT2);
-  Serial.print("\t");
-  Serial.print("PT 3: ");
-  Serial.print(sensorPT3);
-  Serial.println("\t");
+//  Serial.print("PT 1: ");
+//  Serial.print(sensorPT1);
+//  Serial.print("\t");
+//  Serial.print("PT 2: ");
+//  Serial.print(sensorPT2);
+//  Serial.print("\t");
+//  Serial.print("PT 3: ");
+//  Serial.print(sensorPT3);
+//  Serial.println("\t");
 //  Serial.print("PT 4: ");
 //  Serial.print(sensorPT4);
 //  Serial.print ("\t");
@@ -121,10 +148,10 @@ void loop() {
 //  Serial.print ("\t");
 //  Serial.print("PT 8: ");
 //  Serial.println(sensorPT8);
-  delay(500); // delay in between reads for stability
+  delay(100); // delay in between reads for stability
 
   //If the cameras are not on
-  if(!on) { 
+  if(!on && !turnOff) { 
     // Turn on all of the cameras
     digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
     digitalWrite(CAM_2_PWR, HIGH);
@@ -140,7 +167,7 @@ void loop() {
     on = true;
   }
   // If the cameras are not yet recording
-  else if(!recording) {
+  else if(!recording && !stopRecording) {
     digitalWrite(CAM_1_REC, LOW);  //Start Recording
     digitalWrite(CAM_2_REC, LOW);
     digitalWrite(CAM_3_REC, LOW);
@@ -153,6 +180,39 @@ void loop() {
     delay(1000);
     
     recording = true;
+  }
+
+  // Check if the turnOff command has been sent
+  if(turnOff && on) {
+    // Turn off all of the Cameras
+    digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
+    digitalWrite(CAM_2_PWR, HIGH);
+    digitalWrite(CAM_3_PWR, HIGH);
+    digitalWrite(CAM_4_PWR, HIGH);
+    delay(3500);
+    digitalWrite(CAM_1_PWR, LOW);   //Release the power buttons
+    digitalWrite(CAM_2_PWR, LOW);
+    digitalWrite(CAM_3_PWR, LOW);
+    digitalWrite(CAM_4_PWR, LOW);
+    delay(3000);
+    
+    on = false;
+    turnOff = false;
+  }
+  else if(stopRecording && recording) {
+    digitalWrite(CAM_1_REC, LOW);  //Start Recording
+    digitalWrite(CAM_2_REC, LOW);
+    digitalWrite(CAM_3_REC, LOW);
+    digitalWrite(CAM_4_REC, LOW); 
+    delay(100);
+    digitalWrite(CAM_1_REC, HIGH); 
+    digitalWrite(CAM_2_REC, HIGH); 
+    digitalWrite(CAM_3_REC, HIGH); 
+    digitalWrite(CAM_4_REC, HIGH); 
+    delay(1000);
+    
+    recording = false;
+    stopRecording = false;
   }
 
 //  // print the string when a newline arrives:

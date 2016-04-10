@@ -75,43 +75,12 @@ void setup() {
 // The loop routine runs over and over again forever:
 void loop() {
 
-  /* 
-   *  Commands sent to the cameras from the serial monitor
-   *  : 'f' = Turn off all cameras
-   *  : 'o' = Turn on all cameras
-   *  : 's' = Stop recording on all cameras
-   *  : 'r' = Start recording on all cameras
-   */
-  msg = Serial.read();
-  switch (msg) {
-    case 'f':
-      Serial.println("\nTurning Cameras off!\n");
-      turnOff = true;
-      on = true;
-      break;
+  readSerial();
 
-    case 'o': 
-      Serial.println("\nTurning all Cameras on!\n");
-      turnOff = false;
-      on = false;
-      break;
-
-    case 's':
-      Serial.println("\nStopping Recording on all Cameras!\n");
-      stopRecording = true;
-      recording = true;
-      break;
-
-    case 'r':
-      Serial.println("\nStarting to Record on all Cameras!\n");
-      stopRecording = false;
-      recording = false;
-      break;
-
-    default:
-      turnOff = false;
-      stopRecording = false;
-  }
+  Serial.print("recording: "); Serial.print(recording); Serial.print("\n");
+    Serial.print("stopRecording: "); Serial.print(stopRecording); Serial.print("\n");
+    
+    
 
   // read the input on analog pin 0:
 //  int sensorPT1 = analogRead(A0); //PT1
@@ -153,31 +122,13 @@ void loop() {
   //If the cameras are not on
   if(!on && !turnOff) { 
     // Turn on all of the cameras
-    digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
-    digitalWrite(CAM_2_PWR, HIGH);
-    digitalWrite(CAM_3_PWR, HIGH);
-    digitalWrite(CAM_4_PWR, HIGH);
-    delay(3500);
-    digitalWrite(CAM_1_PWR, LOW);   //Release the power buttons
-    digitalWrite(CAM_2_PWR, LOW);
-    digitalWrite(CAM_3_PWR, LOW);
-    digitalWrite(CAM_4_PWR, LOW);
-    delay(3000);
-    
+    togglePwrButton();
+
     on = true;
   }
   // If the cameras are not yet recording
-  else if(!recording && !stopRecording) {
-    digitalWrite(CAM_1_REC, LOW);  //Start Recording
-    digitalWrite(CAM_2_REC, LOW);
-    digitalWrite(CAM_3_REC, LOW);
-    digitalWrite(CAM_4_REC, LOW); 
-    delay(100);
-    digitalWrite(CAM_1_REC, HIGH); 
-    digitalWrite(CAM_2_REC, HIGH); 
-    digitalWrite(CAM_3_REC, HIGH); 
-    digitalWrite(CAM_4_REC, HIGH); 
-    delay(1000);
+  if(!recording && !stopRecording) {
+    toggleRecButton();
     
     recording = true;
   }
@@ -185,43 +136,17 @@ void loop() {
   // Check if the turnOff command has been sent
   if(turnOff && on) {
     // Turn off all of the Cameras
-    digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
-    digitalWrite(CAM_2_PWR, HIGH);
-    digitalWrite(CAM_3_PWR, HIGH);
-    digitalWrite(CAM_4_PWR, HIGH);
-    delay(3500);
-    digitalWrite(CAM_1_PWR, LOW);   //Release the power buttons
-    digitalWrite(CAM_2_PWR, LOW);
-    digitalWrite(CAM_3_PWR, LOW);
-    digitalWrite(CAM_4_PWR, LOW);
-    delay(3000);
+    togglePwrButton();
     
     on = false;
-    turnOff = false;
   }
-  else if(stopRecording && recording) {
-    digitalWrite(CAM_1_REC, LOW);  //Start Recording
-    digitalWrite(CAM_2_REC, LOW);
-    digitalWrite(CAM_3_REC, LOW);
-    digitalWrite(CAM_4_REC, LOW); 
-    delay(100);
-    digitalWrite(CAM_1_REC, HIGH); 
-    digitalWrite(CAM_2_REC, HIGH); 
-    digitalWrite(CAM_3_REC, HIGH); 
-    digitalWrite(CAM_4_REC, HIGH); 
-    delay(1000);
+  
+  if(stopRecording && recording) {
+    toggleRecButton();
     
     recording = false;
-    stopRecording = false;
   }
-
-//  // print the string when a newline arrives:
-//  if (stringComplete) {
-//    Serial.println(inputString);
-//    // clear the string:
-//    inputString = "";
-//    stringComplete = false;
-//  }
+  
 
   led1 = digitalRead(CAM_1_LED);  //Track LEDs
   led2 = digitalRead(CAM_2_LED);
@@ -237,23 +162,59 @@ void loop() {
 //    Serial.println(led1);
 //  }
 
+  isRecording(i, led1);
+//  isRecording(i, led2);
+//  isRecording(i, led3);
+//  isRecording(i, led4);
+  
+  i++;
+}
+
+void togglePwrButton() {
+    digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
+    digitalWrite(CAM_2_PWR, HIGH);
+    digitalWrite(CAM_3_PWR, HIGH);
+    digitalWrite(CAM_4_PWR, HIGH);
+    delay(3500);
+    digitalWrite(CAM_1_PWR, LOW);   //Release the power buttons
+    digitalWrite(CAM_2_PWR, LOW);
+    digitalWrite(CAM_3_PWR, LOW);
+    digitalWrite(CAM_4_PWR, LOW);
+    delay(3000);
+}
+
+void toggleRecButton() {
+    digitalWrite(CAM_1_REC, LOW);  //Start Recording
+    digitalWrite(CAM_2_REC, LOW);
+    digitalWrite(CAM_3_REC, LOW);
+    digitalWrite(CAM_4_REC, LOW); 
+    delay(100);
+    digitalWrite(CAM_1_REC, HIGH); 
+    digitalWrite(CAM_2_REC, HIGH); 
+    digitalWrite(CAM_3_REC, HIGH); 
+    digitalWrite(CAM_4_REC, HIGH); 
+    delay(1000);
+}
+
+// Monitor whether or not the cameras are recording
+void isRecording(int i, int cam) {
   if (i%SAMPLE_SIZE == 0) { 
     for(int j = 0; j < SAMPLE_SIZE; j++) { 
       sum += rec[j]; 
     }
     
     if(sum == 0) {
-      recording = false;
-      Serial.println("\nOFF, NOT RECORDING\n");
+//      recording = false;
+      Serial.println("\nCAM1: OFF, NOT RECORDING\n");
     } 
     else if (sum == SAMPLE_SIZE) {
-      recording = false;
-      Serial.println("\nON, NOT RECORDING\n");
+//      recording = false;
+      Serial.println("\nCAM1: ON, NOT RECORDING\n");
     }
     else if (sum > 0 && sum < 10) {
       if(i > 0) {
-        recording = true;
-        Serial.println("\nRECORDING\n");
+//        recording = true;
+        Serial.println("\nCAM1: RECORDING\n");
       }
     }
     
@@ -263,20 +224,58 @@ void loop() {
     } 
   }
   
-  rec[i%SAMPLE_SIZE] = led1;
-  
-  i++;
+  rec[i%SAMPLE_SIZE] = cam;
 }
 
-//// GOing to be used as event trigger
-//void serialEvent() {
-//  while(Serial.available()) {
-//    char inChar = (char) Serial.read();
-//    inputString += inChar;
-//
-//    if(inChar == '\n') {
-//      stringComplete = true;
-//    }
-//  }
-//}
+// Read in a serial event
+void readSerial() {
+    /* 
+   *  Commands that can be sent to the cameras from the serial monitor
+   *  : 'f' = Turn off all cameras
+   *  : 'o' = Turn on all cameras
+   *  : 's' = Stop recording on all cameras
+   *  : 'r' = Start recording on all cameras
+   */
+  msg = Serial.read();
+  switch (msg) {
+    case 'f':
+      if(on) {
+        Serial.println("\nTurning Cameras off!\n");
+        turnOff = true;
+      } else {
+        Serial.println("\nCamera's are already off...\n");
+      }
+      break;
+
+    case 'o': 
+      if(!on) {
+        Serial.println("\nTurning all Cameras on!\n");
+        turnOff = false;
+      } else {
+        Serial.println("\nCamera's are already on...\n");
+      }
+      break;
+
+    case 's':
+      if(recording) {
+        Serial.println("\nStopping Recording on all Cameras!\n");
+        stopRecording = true;
+      } else {
+        Serial.println("\nCamera's are already NOT recording...\n");
+      }
+      break;
+
+    case 'r':
+      if(!recording) {
+        Serial.println("\nStarting to Record on all Cameras!\n");
+        stopRecording = false;
+      } else {
+        Serial.println("\nCamera's are already recording...\n");
+      }
+      break;
+
+  }
+}
+
+
 

@@ -1,6 +1,6 @@
 #include <OneWire.h>
 
-OneWire  ds(10);  // on pin 10 (a 4.7K pullup resistor is necessary)
+OneWire  ds(13);  // on pin 10 (a 4.7K pullup resistor is necessary)
 
 // Yellow Wire
 #define CAM_1_PWR 42  // Power wire from camera 1
@@ -40,7 +40,8 @@ float kelvin;
 unsigned int temperature;
 
 unsigned char msg;
-bool start, finish, should = false;
+
+bool working, should = false;
 
 unsigned char cameraByte, tcByte = 0;
 
@@ -90,31 +91,39 @@ void readSerial() {
   msg = Serial.read();
   switch (msg) {
     case 0x51:
-      Serial.println("\nStarting up...\n");
+//      Serial.println("\nStarting up...\n");
       respond(true);
-      beginRecording();
-      should = true;
+      if(!working) {
+        beginRecording();
+        should = true;
+      }
       break;
 
     case 0x52:
-      Serial.println("\nStarting up...\n");
+//      Serial.println("\nStarting up...\n");
       respond(false);
-      beginRecording();
-      should = true;
+      if (!working) {
+        beginRecording();
+        should = true;
+      }
       break;
 
     case 0x53:
 //      Serial.println("\nShutting down...\n");
-      respond(true);
-      endRecording();
-      should = false;
+      respond(true);     
+      if (!working) {
+        endRecording();
+        should = false;
+      }
       break;
 
     case 0x54:
 //      Serial.println("\nShutting down...\n");
       respond(false);
-      endRecording();
-      should = false;
+      if (!working) {  
+        endRecording();
+        should = false;
+      }
       break;
 
 //    default:
@@ -146,7 +155,6 @@ void configureBytes() {
  * Get temperature readings from the Thermocouples.
  */
 void readTemp() {
-//  Serial.println("Reading Temp...");
   byte i;
   byte present = 0;
   byte temptype;
@@ -245,21 +253,18 @@ void readTemp() {
 void togglePwrON() {
   int sumv = 0;
   for(int v = 0; v < NUM_OF_CAMS; v++) {
-    Serial.println("\t\tin for");
-    if (on[v]) {
+    if (on[v] == true) {
       sumv++;
-      Serial.println("\t\t\tin if");
     }
   }
-  Serial.print("\n\nSumv = ");
-  Serial.print(sumv);
-  Serial.println();
+//  Serial.print("\n\nSumv = ");
+//  Serial.print(sumv);
+//  Serial.println();
 
   if (sumv == 4) {
-    Serial.println("returning");
     return;
   }
-  Serial.println("\t\tTurning on power");  
+//  Serial.println("\t\tTurning on power");  
   if (!on[0]) {
     digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
   }
@@ -272,6 +277,7 @@ void togglePwrON() {
   if (!on[3]) {
     digitalWrite(CAM_4_PWR, HIGH);      
   }
+//    delay(3500);
   
   // 3.5s active-delay
   int ct1 = 0;
@@ -280,7 +286,6 @@ void togglePwrON() {
     delay(1);
     if(Serial.available()) {
       readSerial();
-      ct1++;
     }
     ct1++;
   }
@@ -301,6 +306,7 @@ void togglePwrON() {
     digitalWrite(CAM_4_PWR, LOW);   
     on[3] = true;   
   }
+//    delay(3000);
 
   // 3s active-delay
   int ct2 = 0;
@@ -309,7 +315,6 @@ void togglePwrON() {
     delay(1);
     if(Serial.available()) {
       readSerial();
-      ct2++;
     }
     ct2++;
   }
@@ -318,13 +323,15 @@ void togglePwrON() {
 void togglePwrOFF() {
   int sumv = 0;
   for(int v = 0; v < NUM_OF_CAMS; v++) {
-    sumv += on[v];
+    if (on[v] == true) {
+      sumv++;
+    }
   }
-
-  if (!sumv) {
+//Serial.println(sumv);
+  if (sumv == 0) {
     return;
   }
-  Serial.println("\t\tTurning off power");
+//  Serial.println("\t\tTurning off power");
   if (on[0]) {
     digitalWrite(CAM_1_PWR, HIGH);  //Hold down the power buttons
   }
@@ -337,7 +344,8 @@ void togglePwrOFF() {
   if (on[3]) {
     digitalWrite(CAM_4_PWR, HIGH);      
   }
-  
+//      delay(3500);
+
   // 3.5s active-delay
   int ct1 = 0;
   while(ct1 < 3500)
@@ -345,7 +353,6 @@ void togglePwrOFF() {
     delay(1);
     if(Serial.available()) {
       readSerial();
-      ct1++;
     }
     ct1++;
   }
@@ -366,6 +373,7 @@ void togglePwrOFF() {
     digitalWrite(CAM_4_PWR, LOW); 
     on[3] = false;     
   }
+//    delay(3000);
 
   // 3s active-delay
   int ct2 = 0;
@@ -374,7 +382,6 @@ void togglePwrOFF() {
     delay(1);
     if(Serial.available()) {
       readSerial();
-      ct2++;
     }
     ct2++;
   }
@@ -383,15 +390,18 @@ void togglePwrOFF() {
 void startRec() {
   int sumv = 0;
   for(int v = 0; v < NUM_OF_CAMS; v++) {
-    sumv += recording[v];
+    if(recording[v]) {
+      sumv++;
+    }
   }
 
   if (sumv == 4) {
     return;
   }
-  Serial.println("\t\tStarting record");
+//  Serial.println("\t\tStarting record");
   if (!recording[0]) {
     digitalWrite(CAM_1_REC, LOW);  //Start Recording
+//    delay(100);
     
     int ct1 = 0;
     while(ct1 < 100)
@@ -399,7 +409,6 @@ void startRec() {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -409,6 +418,7 @@ void startRec() {
   }
   if (!recording[1]) {
     digitalWrite(CAM_2_REC, LOW);
+//    delay(100);
     
     int ct1 = 0;
     while(ct1 < 100)
@@ -416,7 +426,6 @@ void startRec() {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -426,6 +435,7 @@ void startRec() {
   }
   if (!recording[2]) {
     digitalWrite(CAM_3_REC, LOW);
+//    delay(100);
     
     int ct1 = 0;
     while(ct1 < 100)
@@ -433,7 +443,6 @@ void startRec() {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -443,6 +452,7 @@ void startRec() {
   }
   if (!recording[3]) {
     digitalWrite(CAM_4_REC, LOW); 
+//    delay(100);
     
     int ct1 = 0;
     while(ct1 < 100)
@@ -450,7 +460,6 @@ void startRec() {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -458,6 +467,7 @@ void startRec() {
     digitalWrite(CAM_4_REC, HIGH); 
     recording[3] = true;
   }
+//    delay(1000);
   
   int ct1 = 0;
   while(ct1 < 1000)
@@ -465,7 +475,6 @@ void startRec() {
     delay(1);
     if(Serial.available()) {
       readSerial();
-      ct1++;
     }
     ct1++;
   }
@@ -474,23 +483,24 @@ void startRec() {
 void stopRec() {
   int sumv = 0;
   for(int v = 0; v < NUM_OF_CAMS; v++) {
-    sumv += recording[v];
+    if(recording[v]) {
+      sumv++;
+    }
   }
 
   if (!sumv) {
     return;
   }
-  Serial.println("\t\tStopping record");
+//  Serial.println("\t\tStopping record");
   if (recording[0]) {
     digitalWrite(CAM_1_REC, LOW);  //Start Recording
-    
+//    delay(100);
     int ct1 = 0;
     while(ct1 < 100)
     {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -500,6 +510,7 @@ void stopRec() {
   }
   if (recording[1]) {
     digitalWrite(CAM_2_REC, LOW);
+//    delay(100);
     
     int ct1 = 0;
     while(ct1 < 100)
@@ -507,7 +518,6 @@ void stopRec() {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -517,14 +527,14 @@ void stopRec() {
   }
   if (recording[2]) {
     digitalWrite(CAM_3_REC, LOW);
-    
+//    delay(100);
+
     int ct1 = 0;
     while(ct1 < 100)
     {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
@@ -534,21 +544,22 @@ void stopRec() {
   }
   if (recording[3]) {
     digitalWrite(CAM_4_REC, LOW); 
-    
+//    delay(100);
+   
     int ct1 = 0;
     while(ct1 < 100)
     {
       delay(1);
       if(Serial.available()) {
         readSerial();
-        ct1++;
       }
       ct1++;
     }
-    
+//    
     digitalWrite(CAM_4_REC, HIGH); 
     recording[3] = false;
   }
+//    delay(1000);
   
   int ct1 = 0;
   while(ct1 < 1000)
@@ -556,7 +567,6 @@ void stopRec() {
     delay(1);
     if(Serial.available()) {
       readSerial();
-      ct1++;
     }
     ct1++;
   }
@@ -566,7 +576,6 @@ void stopRec() {
 void isRecording(int cam[]) { 
   // If there has been 10 loops
   if (cnt%SAMPLE_SIZE) {
-    Serial.println("ifffffffffffffffffffff");
     for (int y = 0; y < NUM_OF_CAMS; y++) {
       rec[y][cnt%SAMPLE_SIZE] = cam[y];
     }
@@ -578,18 +587,14 @@ void isRecording(int cam[]) {
   for(int t = 0; t < 4; t++) {      
     for(int j = 0; j < SAMPLE_SIZE; j++) {   
       sum[t] += rec[t][j]; 
-      Serial.println("rec: ");
-    Serial.println(rec[t][j]);
     }
-//    Serial.println("sum: ");
-//    Serial.println(sum[t]);
 
     if(sum[t] == 0) {
-      recording[t] = false;
-      on[t] = false;
-        Serial.print("\n#");
-        Serial.print(t);
-        Serial.print(": OFF, NOT RECORDING\n");
+//      recording[t] = false;
+//      on[t] = false;
+//        Serial.print("\n#");
+//        Serial.print(t);
+//        Serial.print(": OFF, NOT RECORDING\n");
       switch (t) {
         case 0:
           cameraByte = cameraByte & (0x70); // Toggle off corresponding indicator bit
@@ -602,11 +607,11 @@ void isRecording(int cam[]) {
       }
     } 
     else if (sum[t] == SAMPLE_SIZE) {
-      recording[t] = false;
-      on[t] = true;
-          Serial.print("\n#");
-          Serial.print(t);
-          Serial.println(": ON, NOT RECORDING\n");
+//      recording[t] = false;
+//      on[t] = true;
+//          Serial.print("\n#");
+//          Serial.print(t);
+//          Serial.println(": ON, NOT RECORDING\n");
       switch (t) {
         case 0:
           cameraByte = cameraByte & (0x70); // Toggle off corresponding indicator bit
@@ -620,11 +625,11 @@ void isRecording(int cam[]) {
     }
     else if (sum[t] > 0 && sum[t] < SAMPLE_SIZE) {
       if(i > 0) {
-        recording[t] = true;
-        on[t] = true;
-          Serial.print("\n#");
-          Serial.print(t);
-          Serial.println(": RECORDING\n");          
+//        recording[t] = true;
+//        on[t] = true;
+//          Serial.print("\n#");
+//          Serial.print(t);
+//          Serial.println(": RECORDING\n");          
         cameraByte = cameraByte | (1 << (7 - t)); // Toggle or leave corresponding indicator bit
       }
     } 
@@ -638,24 +643,12 @@ void isRecording(int cam[]) {
 //  verify();
   if (cnt <= 100) {
     cnt++;
-    Serial.println(cnt);
   } else {
     cnt = 0;
   }
 }
 
 void verify() {
-//  if (!(cnt%SAMPLE_SIZE)) {
-//    return;
-//  }
-  
-//  int onSum, recSum = 0;
-//  for(int t = 0; t < NUM_OF_CAMS; t++) {
-//    if (on[t]) { onSum++; }
-//    
-//    if (rec[t]) { recSum++; }
-//  }
-
   if (should) {
     Serial.println("\tShould be on");
     togglePwrON();
@@ -665,51 +658,34 @@ void verify() {
     stopRec();
     togglePwrOFF();
   }
-//  if(onSum){
-//    if(!(onSum == 4)) {
-//      if (should) {
-//        togglePwrON();
-//      } else {
-//        togglePwrOFF();
-//      }
-//    }
-//  } else {
-//    if (should) {
-//      togglePwrON();
-//    }
-//  }
-//  if(recSum) {
-//    if(!(recSum == 4)) {
-//      if (should) {
-//        startRec();
-//      } else {
-//        stopRec();
-//      }
-//    }
-//  } else {
-//    if(should) {
-//      startRec();
-//    }
-//  }
 }
 
 void beginRecording() {
-  togglePwrON();
-  startRec();
-
-  for(int b = 0; b < NUM_OF_CAMS; b++) {
-    on[b] = true;
-    recording[b] = true;
+  working = true;
+  while (working) {
+    togglePwrON();
+    startRec();
+  
+    for(int b = 0; b < NUM_OF_CAMS; b++) {
+      on[b] = true;
+      recording[b] = true;
+    }
+    working = false;
   }
 }
 
 void endRecording() {
-  stopRec();
-  togglePwrOFF();
+  working = true;
+  while (working) {
+//    Serial.println("End rec");
+    stopRec();
+    togglePwrOFF();
 
-  for(int b = 0; b < NUM_OF_CAMS; b++) {
-    on[b] = false;
-    recording[b] = false;
+    for(int b = 0; b < NUM_OF_CAMS; b++) {
+      on[b] = false;
+      recording[b] = false;
+    }
+    working = false;
   }
 }
 
@@ -719,19 +695,6 @@ void loop() {
 //  Serial.println("Reading Temp");
   readTemp();
   
-//  if(start) {
-//    togglePwrON();
-//    startRec();
-//
-//    start = false;
-//  }
-//
-//  if(finish) {
-//    stopRec();
-//    togglePwrOFF();
-//    
-//    finish = false;
-//  }
 //  Serial.println("Verifying");
 //  verify();   // Think about running this every 5 loops or something.
 
@@ -755,6 +718,5 @@ void loop() {
   if(i == 100) { i = 0; } // Reset i to prevent it from spilling over max int value
   
   i++; 
-//  Serial.println(i);
 }
 
